@@ -67,14 +67,30 @@ data MyEvents
 type TreeStateType = (NonEmpty (V2 CInt), Maybe (V2 CInt), (Maybe Direction))
 type ActionType = Direction
 
-calculateDirection snake fruit =
-  if getX fruit < getX snake
-    then DirLeft
-    else if getX fruit > getX snake
-      then DirRight
-      else if getY fruit < getY snake
-        then DirUp
-        else DirDown
+-- calculateDirection snake snaketail fruit =
+--   if getX fruit < getX snake
+--     then DirLeft
+--     else if getX fruit > getX snake
+--       then DirRight
+--       else if getY fruit < getY snake
+--         then DirUp
+--         else DirDown
+
+-- Avoid going backwards
+calculateDirection' snake (snaketail) fruit
+  | getX fruit < getX snake && getX snake <= getX ( snaketail) = DirLeft
+  | getX fruit < getX snake && getX snake > getX ( snaketail) = DirUp
+  | getX fruit > getX snake && getX snake >= getX ( snaketail) = DirRight
+  | getX fruit > getX snake && getX snake < getX ( snaketail) = DirUp
+  | getY fruit < getY snake && getY snake <= getY ( snaketail) = DirUp
+  | getY fruit < getY snake && getY snake > getY ( snaketail) = DirLeft
+  | getY fruit > getY snake && getY snake >= getY ( snaketail) = DirDown
+  | otherwise = DirLeft 
+-- calculateDirection''
+getTail snaketail
+  | length snaketail > 1 = snaketail !! 1
+  | otherwise = snaketail !! 0
+  
 
 ifFruitExists :: NodeSequence g TreeStateType ActionType ()
 ifFruitExists = do
@@ -84,26 +100,26 @@ ifFruitExists = do
 getDirectionOfFruit :: NodeSequence g TreeStateType ActionType (Direction)
 getDirectionOfFruit = do
   (us, fruit, _) <- getPerception
-  return $ calculateDirection (head us) (fromJust fruit)
+  return $ calculateDirection' (head us) (getTail (toList us)) (fromJust fruit)
 
 move :: Direction -> NodeSequence g TreeStateType ActionType ()
 move dir = fromAction $ SimpleAction (\_ -> dir)
 
 snakeTree :: NodeSequence g TreeStateType ActionType ()
 snakeTree = do
-  ifFruitExists
+  ifFruitExists -- sequence
   dir <- getDirectionOfFruit
   move dir
 
 -- snakeTreeNoSequence :: NodeSequence g TreeStateType ActionType ()
 -- snakeTreeNoSequence = do
--- 	-- b <- ifFruitExistsBool
--- 	-- if b == True
+--  -- b <- ifFruitExistsBool
+--  -- if b == True
 --   -- then do
 --   dir <- getDirectionOfFruit
 --   move dir
 --   -- else
--- 	--   return ()
+--  --   return ()
 
 runSnakeTree :: GameState -> GameState
 runSnakeTree gameState = r where
